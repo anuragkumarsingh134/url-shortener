@@ -1,88 +1,78 @@
 import express from "express";
-import cors from "cors";
 import { nanoid } from "nanoid";
-import pg from "pg";
-import dotenv from "dotenv";
+import { Pool } from "pg";
+import cors from "cors";
 
-// Load environment variables
-dotenv.config();
-
-// Initialize Express
 const app = express();
-const PORT = process.env.PORT || 10000;
+const port = process.env.PORT || 10000;
 
-// Middleware
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+
 app.use(express.json());
 app.use(cors());
 
-// PostgreSQL Database Connection
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Required for Render
+// API to shorten a given URL (POST)
+app.post("/shorten", async (req, res) => {
+  const { originalUrl } = req.body;
+  if (!originalUrl) return res.status(400).json({ error: "URL is required" });
+
+  try {
+    const shortId = nanoid(6);
+    await pool.query("INSERT INTO urls (short, original) VALUES ($1, $2)", [
+      shortId,
+      originalUrl,
+    ]);
+    res.json({ shortUrl: `${req.protocol}://${req.get("host")}/${shortId}` });
+  } catch (error) {
+    res.status(500).json({ error: "Database error" });
+  }
 });
 
-// Initialize Database Table
-async function initializeDB() {
-  try {
-    const client = await pool.connect();
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS urls (
-        id SERIAL PRIMARY KEY,
-        short TEXT UNIQUE NOT NULL,
-        original TEXT NOT NULL
-      );
-    `);
-    client.release();
-  } catch (error) {
-    console.error("Database initialization error:", error);
-  }
-}
-initializeDB();
+// API to shorten a URL using GET
+app.get("/shorten", async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: "URL parameter is required" });
 
-// API to shorten URL
-app.post("/shorten", async (req, res) => {
   try {
-    const { url } = req.body;
-    if (!url) return res.status(400).json({ error: "URL is required" });
-
     const shortId = nanoid(6);
-    const client = await pool.connect();
-
-    await client.query("INSERT INTO urls (short, original) VALUES ($1, $2)", [
+    await pool.query("INSERT INTO urls (short, original) VALUES ($1, $2)", [
       shortId,
       url,
     ]);
-    client.release();
-
     res.json({ shortUrl: `${req.protocol}://${req.get("host")}/${shortId}` });
   } catch (error) {
-    res.status(500).json({ error: "Server Error" });
+    res.status(500).json({ error: "Database error" });
   }
 });
 
-// API to redirect shortened URL
+// Redirect short URL to original URL (and delete after one use)
 app.get("/:shortId", async (req, res) => {
+  const { shortId } = req.params;
   try {
-    const { shortId } = req.params;
-    const client = await pool.connect();
+    const result = await pool.query("SELECT original FROM urls WHERE short = $1", [
+      shortId,
+    ]);
 
-    const result = await client.query(
-      "SELECT original FROM urls WHERE short = $1",
-      [shortId]
-    );
-    client.release();
-
-    if (result.rows.length > 0) {
-      res.redirect(result.rows[0].original);
-    } else {
-      res.status(404).json({ error: "URL not found" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "URL not found or expired" });
     }
+
+    const originalUrl = result.rows[0].original;
+
+    // Delete the link after it's used once
+    await pool.query("DELETE FROM urls WHERE short = $1", [shortId]);
+
+    res.redirect(originalUrl);
   } catch (error) {
-    res.status(500).json({ error: "Server Error" });
+    res.status(500).json({ error: "Database error" });
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`✅ Server running on port ${port}`);
 });
