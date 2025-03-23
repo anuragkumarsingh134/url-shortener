@@ -32,6 +32,16 @@ function App() {
           Short URL: <a href={shortUrl} target="_blank">{shortUrl}</a>
         </p>
       )}
+
+      {/* API Documentation Section */}
+      <div className="api-docs">
+        <h3>API Documentation</h3>
+        <p>To shorten a URL via API, send a GET request:</p>
+        <pre>{`${import.meta.env.VITE_API_URL}/api/shorten?originalUrl=https://example.com`}</pre>
+        <p>Response:</p>
+        <pre>{`{ "shortUrl": "https://your-short-url.com/abcd123" }`}</pre>
+      </div>
+
       <ToastContainer />
     </div>
   );
