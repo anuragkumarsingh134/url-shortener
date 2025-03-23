@@ -6,7 +6,8 @@ export default function App() {
     const [originalUrl, setOriginalUrl] = useState("");
     const [shortUrl, setShortUrl] = useState(null);
     const [loading, setLoading] = useState(false);
-    const API_URL = "http://localhost:3000";
+    const API_URL = "https://url-shortener-detk.onrender.com";
+
 
     const handleShorten = async () => {
         if (!originalUrl) return;
