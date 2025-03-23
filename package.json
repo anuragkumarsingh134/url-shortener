@@ -1,15 +1,16 @@
 {
   "name": "url-shortener",
   "version": "1.0.0",
-  "main": "server.mjs",
+  "description": "A simple URL shortener",
   "type": "module",
+  "main": "server.mjs",
   "scripts": {
     "start": "node server.mjs"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "nanoid": "^5.1.5",
-    "sqlite3": "^5.1.7"
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "nanoid": "^5.0.0",
+    "pg": "^8.11.1"
   }
 }
