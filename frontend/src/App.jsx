@@ -1,56 +1,38 @@
 import { useState } from "react";
+import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
-  const [url, setUrl] = useState("");
+  const [originalUrl, setOriginalUrl] = useState("");
   const [shortUrl, setShortUrl] = useState("");
-  const [error, setError] = useState("");
 
-  const backendURL = "https://url-shortener-3r4x.onrender.com"; // Update this with your backend URL
-
-  const handleShorten = async () => {
-    setError("");
-    setShortUrl("");
-
-    if (!url) {
-      setError("Please enter a valid URL.");
+  const shortenUrl = async () => {
+    if (!originalUrl) {
+      toast.error("Please enter a URL!");
       return;
     }
 
     try {
-      const response = await fetch(`${backendURL}/shorten`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setShortUrl(data.shortUrl);
-      } else {
-        setError(data.error || "Error shortening URL");
-      }
-    } catch (err) {
-      setError("Failed to connect to the server.");
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/shorten`, { originalUrl });
+      setShortUrl(res.data.shortUrl);
+      toast.success("URL Shortened Successfully!");
+    } catch (error) {
+      toast.error("Error shortening URL");
     }
   };
 
   return (
     <div className="container">
-      <h1>🔗 URL Shortener</h1>
-      <input
-        type="text"
-        placeholder="Enter URL..."
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-      />
-      <button onClick={handleShorten}>Shorten</button>
-
+      <h2>URL Shortener</h2>
+      <input type="text" placeholder="Enter URL" value={originalUrl} onChange={(e) => setOriginalUrl(e.target.value)} />
+      <button onClick={shortenUrl}>Shorten</button>
       {shortUrl && (
         <p>
-          Shortened URL: <a href={shortUrl} target="_blank" rel="noopener noreferrer">{shortUrl}</a>
+          Short URL: <a href={shortUrl} target="_blank">{shortUrl}</a>
         </p>
       )}
-      {error && <p className="error">{error}</p>}
+      <ToastContainer />
     </div>
   );
 }

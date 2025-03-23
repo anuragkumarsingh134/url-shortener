@@ -1,71 +1,51 @@
 import express from "express";
-import { nanoid } from "nanoid";
-import { Pool } from "pg";
+import pkg from "pg";
+import dotenv from "dotenv";
 import cors from "cors";
+import shortid from "shortid";
 
-const app = express();
-const port = process.env.PORT || 10000;
+dotenv.config();
+const { Pool } = pkg;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
 });
 
-app.use(express.json());
+const app = express();
 app.use(cors());
+app.use(express.json());
 
-// API to shorten a given URL (POST)
+const BASE_URL = process.env.BASE_URL || "http://localhost:5000";
+
+// 🟢 Shorten URL
 app.post("/shorten", async (req, res) => {
   const { originalUrl } = req.body;
   if (!originalUrl) return res.status(400).json({ error: "URL is required" });
 
+  const shortCode = shortid.generate();
+  const shortUrl = `${BASE_URL}/${shortCode}`;
+
   try {
-    const shortId = nanoid(6);
-    await pool.query("INSERT INTO urls (short, original) VALUES ($1, $2)", [
-      shortId,
-      originalUrl,
-    ]);
-    res.json({ shortUrl: `${req.protocol}://${req.get("host")}/${shortId}` });
+    await pool.query("INSERT INTO urls (short_code, original_url) VALUES ($1, $2)", [shortCode, originalUrl]);
+    res.json({ shortUrl });
   } catch (error) {
     res.status(500).json({ error: "Database error" });
   }
 });
 
-// API to shorten a URL using GET
-app.get("/shorten", async (req, res) => {
-  const { url } = req.query;
-  if (!url) return res.status(400).json({ error: "URL parameter is required" });
+// 🟢 Redirect & Expire After One Use
+app.get("/:shortCode", async (req, res) => {
+  const { shortCode } = req.params;
 
   try {
-    const shortId = nanoid(6);
-    await pool.query("INSERT INTO urls (short, original) VALUES ($1, $2)", [
-      shortId,
-      url,
-    ]);
-    res.json({ shortUrl: `${req.protocol}://${req.get("host")}/${shortId}` });
-  } catch (error) {
-    res.status(500).json({ error: "Database error" });
-  }
-});
+    const result = await pool.query("SELECT original_url FROM urls WHERE short_code = $1", [shortCode]);
 
-// Redirect short URL to original URL (and delete after one use)
-app.get("/:shortId", async (req, res) => {
-  const { shortId } = req.params;
-  try {
-    const result = await pool.query("SELECT original FROM urls WHERE short = $1", [
-      shortId,
-    ]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "URL not found or expired" });
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "URL not found or expired" });
-    }
+    const originalUrl = result.rows[0].original_url;
 
-    const originalUrl = result.rows[0].original;
-
-    // Delete the link after it's used once
-    await pool.query("DELETE FROM urls WHERE short = $1", [shortId]);
+    // 🛑 Delete the URL after one use
+    await pool.query("DELETE FROM urls WHERE short_code = $1", [shortCode]);
 
     res.redirect(originalUrl);
   } catch (error) {
@@ -73,6 +53,21 @@ app.get("/:shortId", async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`✅ Server running on port ${port}`);
+// 🟢 API Endpoint to Get Shortened URL via GET request
+app.get("/api/shorten", async (req, res) => {
+  const { originalUrl } = req.query;
+  if (!originalUrl) return res.status(400).json({ error: "URL is required" });
+
+  const shortCode = shortid.generate();
+  const shortUrl = `${BASE_URL}/${shortCode}`;
+
+  try {
+    await pool.query("INSERT INTO urls (short_code, original_url) VALUES ($1, $2)", [shortCode, originalUrl]);
+    res.json({ shortUrl });
+  } catch (error) {
+    res.status(500).json({ error: "Database error" });
+  }
 });
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
