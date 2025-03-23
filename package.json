@@ -1,6 +1,7 @@
 {
   "name": "url-shortener",
   "version": "1.0.0",
+  "main": "server.mjs",
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
@@ -11,7 +12,6 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "framer-motion": "^12.5.0",
     "nanoid": "^5.1.5",
     "sqlite3": "^5.1.7"
   },
