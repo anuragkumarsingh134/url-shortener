@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./App.css"; // ✅ Ensure this is at the top of App.jsx
 
 
-const backendURL = "https://url-shortener-3r4x.onrender.com"; // ✅ Backend URL
+const backendURL = "https://url-shortener-3r4x.onrender.com"; // Update this with your backend URL
 
 function App() {
   const [longUrl, setLongUrl] = useState("");
