@@ -13,6 +13,7 @@
     "express": "^4.21.2",
     "nanoid": "^5.1.5",
     "pg": "^8.14.1",
-    "react-toastify": "^11.0.5"
+    "react-toastify": "^11.0.5",
+    "shortid": "^2.2.17"
   }
 }
