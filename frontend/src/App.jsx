@@ -5,7 +5,7 @@ function App() {
   const [shortUrl, setShortUrl] = useState("");
   const [error, setError] = useState("");
 
-  const backendURL = "https://url-shortener-detk.onrender.com"; // Update this with your backend URL
+  const backendURL = "https://url-shortener-3r4x.onrender.com"; // Update this with your backend URL
 
   const handleShorten = async () => {
     setError("");
